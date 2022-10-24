@@ -22,8 +22,11 @@ API курсов валют системы МИР
 ```
 
 ```GET``` /rate?currency={CURRENCY_ID} - курсы за последние 7 дней по определенной валюте
+
 ```GET``` /rate?currency={CURRENCY_ID}&beginDate=YYYY-MM-DD - c какой даты до сегодняшнего дня
+
 ```GET``` /rate?currency={CURRENCY_ID}&endDate=YYYY-MM-DD - 7 дней до какой даты
+
 ```GET``` /rate?currency={CURRENCY_ID}&beginDate=YYYY-MM-DD&endDate=YYYY-MM-DD - с какой по какую дату
 
 
