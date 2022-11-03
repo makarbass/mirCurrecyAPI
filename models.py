@@ -20,3 +20,8 @@ class Rate(Base):
     currency_id = Column(Integer())
     value = Column(Float(),  nullable = False)
     datetime = Column(TIMESTAMP, nullable=False, server_default=text("CURRENT_TIMESTAMP"))
+
+class Hashsum(Base):
+    __tablename__ = 'hashsum'
+
+    hashsum = Column(String(255), primary_key=True, nullable = False)

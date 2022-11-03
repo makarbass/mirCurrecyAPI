@@ -1,8 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import hashlib
-from os import path
-from models import Currency, Rate
+from models import Currency, Rate, Hashsum
 from my_engine import session_scope
 from functions import get_currency
 
@@ -15,7 +14,6 @@ HEADERS = {
     'Referer': 'https://mironline.ru/support/list/',
     'Connection': 'keep-alive',
 }
-CHECKSUM = "checksum.txt"
 
 def get_rates() -> dict:
     client = requests.session()
@@ -32,35 +30,38 @@ def get_rates() -> dict:
     cell = dict(zip(contents[::2], contents[1::2]))
     return cell
 
-def comp_rates():
-    with session_scope() as session:
-        li = dict()
-        currency = session.query(Currency).all()
-        for _ in currency:
-            l = session.query(Currency.name, Rate.value).filter(
-                Rate.currency_id == _.id).join(
-                    Currency, Currency.id == Rate.currency_id).order_by(
-                        Rate.id.desc()).first()
-            li[l[0]] = l[1]
-            if response[_.name] != li[l[0]]:
-                add = Rate(
-                currency_id = _.id,
-                value = float(response[_.name].replace(',','.'))
-                )
-                session.add(add)
+
+def comp_rates(response):
+    li = []
+    for _ in response.keys():
+        l = session.query(Currency.name, Rate.value, Currency.id).filter(Currency.name == _).join(
+                Currency, Currency.id == Rate.currency_id).order_by(
+                    Rate.id.desc()).first()
+        if response[_] != l[1]:
+            li.append(Rate(
+                currency_id = l.id,
+                value = float(response[_].replace(',','.'))
+            ))
+    session.add_all(li)
 
 
 response = get_rates()
 a = get_currency()
 checksum_rates = hashlib.md5(str(response).encode("utf-8")).hexdigest()
-if path.isfile(CHECKSUM):
-    with open(CHECKSUM, 'r+') as file:
-        checksum_file = file.readline()
-        if checksum_rates != checksum_file:
-            comp_rates()
+with session_scope() as session:
+    put = Hashsum(hashsum = checksum_rates)
+    checksum_db = session.query(Hashsum.hashsum).one_or_none()
+    if checksum_db:
+        if checksum_rates != checksum_db[0]:
+            comp_rates(response)
+            session.query(Hashsum).filter(
+                Hashsum.hashsum == checksum_db[0]
+                ).update(
+                    {
+                        "hashsum": checksum_rates
+                        }, synchronize_session="fetch")     
         else:
             print("checksums are equals")
-else:
-    with open(CHECKSUM, 'w') as file:
-        file.write(checksum_rates)
-        comp_rates()
+    else:
+            comp_rates(response)
+            session.add(put)
